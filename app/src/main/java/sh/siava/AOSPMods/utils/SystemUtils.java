@@ -3,7 +3,6 @@ package sh.siava.AOSPMods.utils;
 import static com.topjohnwu.superuser.Shell.cmd;
 import static de.robv.android.xposed.XposedBridge.log;
 import static de.robv.android.xposed.XposedHelpers.callMethod;
-import static de.robv.android.xposed.XposedHelpers.getStaticObjectField;
 
 import android.annotation.SuppressLint;
 import android.app.AlarmManager;
@@ -16,9 +15,6 @@ import android.hardware.camera2.CameraManager;
 import android.hardware.camera2.CameraMetadata;
 import android.media.AudioManager;
 import android.net.ConnectivityManager;
-import android.os.Build;
-import android.os.Handler;
-import android.os.HandlerThread;
 import android.os.PowerManager;
 import android.os.SystemClock;
 import android.os.VibrationEffect;
@@ -31,17 +27,13 @@ import androidx.annotation.Nullable;
 import org.jetbrains.annotations.Contract;
 
 import sh.siava.AOSPMods.BuildConfig;
-import sh.siava.AOSPMods.XPrefs;
 
 public class SystemUtils {
-	private static final int THREAD_PRIORITY_BACKGROUND = 10;
 
 	@SuppressLint("StaticFieldLeak")
 	static SystemUtils instance;
-	private Handler mHandler = null;
 
 	Context mContext;
-	CameraManager mCameraManager;
 	VibratorManager mVibrationManager;
 	AudioManager mAudioManager;
 	PowerManager mPowerManager;
@@ -51,9 +43,6 @@ public class SystemUtils {
 	NetworkStats mNetworkStats;
 	DownloadManager mDownloadManager = null;
 	boolean hasVibrator;
-	int maxFlashLevel = -1;
-
-	TorchCallback torchCallback = new TorchCallback();
 
 	public static void RestartSystemUI() {
 		cmd("killall com.android.systemui").submit();
@@ -178,20 +167,6 @@ public class SystemUtils {
 
 		instance = this;
 
-		//Camera and Flash
-		try {
-			HandlerThread thread = new HandlerThread("", THREAD_PRIORITY_BACKGROUND);
-			thread.start();
-			mHandler = new Handler(thread.getLooper());
-			mCameraManager = (CameraManager) mContext.getSystemService(Context.CAMERA_SERVICE);
-
-			mCameraManager.registerTorchCallback(torchCallback, mHandler);
-		} catch (Throwable t) {
-			if (BuildConfig.DEBUG) {
-				log("AOSPMods: Failed to Register flash callback");
-				t.printStackTrace();
-			}
-		}
 
 		//Connectivity
 		try {
@@ -246,27 +221,7 @@ public class SystemUtils {
 	}
 
 	private void setFlashInternal(boolean enabled) {
-		try {
-			String flashID = getFlashID(mCameraManager);
-			if (flashID.equals("")) {
-				return;
-			}
-			if (enabled
-					&& XPrefs.Xprefs.getBoolean("leveledFlashTile", false)
-					&& XPrefs.Xprefs.getBoolean("isFlashLevelGlobal", false)
-					&& supportsFlashLevelsInternal()) {
-				float currentPct = XPrefs.Xprefs.getFloat("flashPCT", 0.5f);
-				setFlashInternal(true, currentPct);
-				return;
-			}
-
-			mCameraManager.setTorchMode(flashID, enabled);
-		} catch (Throwable t) {
-			if (BuildConfig.DEBUG) {
-				log("AOSPMods Error in setting flashlight");
-				t.printStackTrace();
-			}
-		}
+		return;
 	}
 
 	@SuppressWarnings("BooleanMethodIsAlwaysInverted")
@@ -276,50 +231,11 @@ public class SystemUtils {
 	}
 
 	private boolean supportsFlashLevelsInternal() {
-		try {
-			String flashID = getFlashID(mCameraManager);
-			if (flashID.equals("")) {
-				return false;
-			}
-			if (Build.VERSION.SDK_INT >= 33 && maxFlashLevel == -1) {
-				@SuppressWarnings("unchecked")
-				CameraCharacteristics.Key<Integer> FLASH_INFO_STRENGTH_MAXIMUM_LEVEL = (CameraCharacteristics.Key<Integer>) getStaticObjectField(CameraCharacteristics.class, "FLASH_INFO_STRENGTH_MAXIMUM_LEVEL");
-				maxFlashLevel = mCameraManager.getCameraCharacteristics(flashID).get(FLASH_INFO_STRENGTH_MAXIMUM_LEVEL);
-			}
-			return maxFlashLevel > 1;
-		} catch (Throwable ignored) {
-			return false;
-		}
+		return false;
 	}
 
 	private void setFlashInternal(boolean enabled, float pct) {
-		try {
-			String flashID = getFlashID(mCameraManager);
-			if (flashID.equals("")) {
-				return;
-			}
-			if (Build.VERSION.SDK_INT >= 33 && maxFlashLevel == -1) {
-				@SuppressWarnings("unchecked")
-				CameraCharacteristics.Key<Integer> FLASH_INFO_STRENGTH_MAXIMUM_LEVEL = (CameraCharacteristics.Key<Integer>) getStaticObjectField(CameraCharacteristics.class, "FLASH_INFO_STRENGTH_MAXIMUM_LEVEL");
-				maxFlashLevel = mCameraManager.getCameraCharacteristics(flashID).get(FLASH_INFO_STRENGTH_MAXIMUM_LEVEL);
-			}
-			if (enabled) {
-				if (maxFlashLevel > 1) //good news. we can set levels
-				{
-					callMethod(mCameraManager, "turnOnTorchWithStrengthLevel", flashID, Math.max(Math.round(pct * maxFlashLevel), 1));
-				} else //flash doesn't support levels: go normal
-				{
-					setFlashInternal(true);
-				}
-			} else {
-				mCameraManager.setTorchMode(flashID, false);
-			}
-		} catch (Throwable t) {
-			if (BuildConfig.DEBUG) {
-				log("AOSPMods Error in setting flashlight");
-				t.printStackTrace();
-			}
-		}
+		return;
 	}
 
 	private void toggleFlashInternal() {
