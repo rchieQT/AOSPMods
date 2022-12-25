@@ -1,3 +1,10 @@
+**canary-194**  
+- Fixed QS tile color on light theme  
+- Fixed startup wrong clock position  
+  
+**canary-193**  
+- Fixed QS light theme on A13 R18  
+  
 **canary-192**  
 - (Potential) Fixed maximum statusbar notifications  
   
